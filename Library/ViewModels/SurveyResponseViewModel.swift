@@ -64,15 +64,16 @@ public final class SurveyResponseViewModel: SurveyResponseViewModelType {
       }
       .skipNil()
 
-    let postRequest = self.policyForNavigationActionProperty.signal.skipNil()
+    let requestAndNavigationType = self.policyForNavigationActionProperty.signal.skipNil()
       .map { action in (action.request, action.navigationType) }
+
+    let postRequest = requestAndNavigationType
       .filter { request, navigationType in
         isUnpreparedSurvey(request: request) && navigationType == .formSubmitted
       }
       .map { request, _ in request }
 
-    let redirectAfterPostRequest = self.policyForNavigationActionProperty.signal.skipNil()
-      .map { action in (action.request, action.navigationType) }
+    let redirectAfterPostRequest = requestAndNavigationType
       .filter { request, navigationType in
         isUnpreparedSurvey(request: request) && navigationType == .other
       }
@@ -83,9 +84,8 @@ public final class SurveyResponseViewModel: SurveyResponseViewModelType {
       self.closeButtonTappedProperty.signal
     )
 
-    self.goToProject = self.policyForNavigationActionProperty.signal.skipNil()
-      .map { action in action.request }
-      .map { request -> (Param, RefTag?)? in
+    self.goToProject = requestAndNavigationType
+      .map { request, _ -> (Param, RefTag?)? in
         if case let (.project(param, .root, refTag))? = Navigation.match(request) {
           return (param, refTag)
         }
@@ -93,13 +93,13 @@ public final class SurveyResponseViewModel: SurveyResponseViewModelType {
       }
       .skipNil()
 
-    self.policyDecisionProperty <~ self.policyForNavigationActionProperty.signal.skipNil()
-      .map { action in
-        if !AppEnvironment.current.apiService.isPrepared(request: action.request) {
+    self.policyDecisionProperty <~ requestAndNavigationType
+      .map { request, _ in
+        if !AppEnvironment.current.apiService.isPrepared(request: request) {
           return false
         }
 
-        return isSurvey(request: action.request)
+        return isSurvey(request: request)
       }
       .map { $0 ? .allow : .cancel }
 
