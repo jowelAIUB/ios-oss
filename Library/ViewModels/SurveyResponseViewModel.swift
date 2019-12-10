@@ -67,7 +67,7 @@ public final class SurveyResponseViewModel: SurveyResponseViewModelType {
     let requestAndNavigationType = self.policyForNavigationActionProperty.signal.skipNil()
       .map { action in (action.request, action.navigationType) }
 
-    let postRequest = requestAndNavigationType
+    let surveyPostRequest = requestAndNavigationType
       .filter { request, navigationType in
         isUnpreparedSurvey(request: request) && navigationType == .formSubmitted
       }
@@ -110,13 +110,13 @@ public final class SurveyResponseViewModel: SurveyResponseViewModelType {
       .mapConst(Strings.Survey())
 
     self.extractFormDataWithJavaScript = surveyResponse
-      .takeWhen(postRequest.filter { $0.httpBody == nil })
+      .takeWhen(surveyPostRequest.filter { $0.httpBody == nil })
       .map { surveyResponse in
         "$('#edit_survey_response_\(surveyResponse.id)').serialize()"
       }
 
     let newRequest = Signal.combineLatest(
-      postRequest.filter { $0.httpBody == nil },
+      surveyPostRequest.filter { $0.httpBody == nil },
       self.didEvaluateJavaScriptWithResultProperty.signal
     )
     .map(requestInjectedWithFormData)
