@@ -14,6 +14,9 @@ public struct Environment {
   /// The amount of time to delay API requests by. Used primarily for testing. Default value is `0.0`.
   public let apiDelayInterval: DispatchTimeInterval
 
+  /// A type that exposes Apple Pay capabilities
+  public let applePayCapabilities: ApplePayCapabilitiesType
+
   /// The app instance
   public let application: UIApplicationType
 
@@ -77,6 +80,9 @@ public struct Environment {
   /// A type that exposes how to interface with an NSBundle. Default value is `Bundle.main`.
   public let mainBundle: NSBundleType
 
+  /// The optimizely client
+  public let optimizelyClient: OptimizelyClientType?
+
   /// A type that manages registration for push notifications.
   public let pushRegistrationType: PushRegistrationType.Type
 
@@ -96,6 +102,7 @@ public struct Environment {
   public init(
     apiService: ServiceType = Service(),
     apiDelayInterval: DispatchTimeInterval = .seconds(0),
+    applePayCapable: ApplePayCapabilitiesType = ApplePayCapabilities(),
     application: UIApplicationType = UIApplication.shared,
     assetImageGeneratorType: AssetImageGeneratorType.Type = AVAssetImageGenerator.self,
     cache: KSCache = KSCache(),
@@ -115,6 +122,7 @@ public struct Environment {
     launchedCountries: LaunchedCountries = .init(),
     locale: Locale = .current,
     mainBundle: NSBundleType = Bundle.main,
+    optimizelyClient: OptimizelyClientType? = nil,
     pushRegistrationType: PushRegistrationType.Type = PushRegistration.self,
     reachability: SignalProducer<Reachability, Never> = Reachability.signalProducer,
     scheduler: DateScheduler = QueueScheduler.main,
@@ -123,6 +131,7 @@ public struct Environment {
   ) {
     self.apiService = apiService
     self.apiDelayInterval = apiDelayInterval
+    self.applePayCapabilities = applePayCapable
     self.application = application
     self.assetImageGeneratorType = assetImageGeneratorType
     self.cache = cache
@@ -142,6 +151,7 @@ public struct Environment {
     self.launchedCountries = launchedCountries
     self.locale = locale
     self.mainBundle = mainBundle
+    self.optimizelyClient = optimizelyClient
     self.pushRegistrationType = pushRegistrationType
     self.reachability = reachability
     self.scheduler = scheduler

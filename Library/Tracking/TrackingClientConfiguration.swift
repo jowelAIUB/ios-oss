@@ -13,6 +13,12 @@ public enum TrackingClientIdentifier: String {
   }
 }
 
+extension TrackingClientIdentifier: CustomStringConvertible {
+  public var description: String {
+    return self.rawValue
+  }
+}
+
 public typealias TrackingClientRecordDictionary = (String, [String: Any]) -> [String: Any]
 public typealias TrackingClientRequest = (TrackingClientConfiguration, EnvironmentType, Data) -> URLRequest?
 public typealias TrackingClientURL = (EnvironmentType) -> URL?
@@ -115,7 +121,7 @@ private let dataLakeRequest: TrackingClientRequest = { config, environmentType, 
     ["Content-Type": "application/json; charset=utf-8"]
   )
 
-  return request
+  return AppEnvironment.current.apiService.preparedRequest(forRequest: request)
 }
 
 private let dataLakeUrl: TrackingClientURL = { environmentType in

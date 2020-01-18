@@ -60,13 +60,13 @@ public protocol DeprecatedCheckoutViewModelOutputs {
   var goToSafariBrowser: Signal<URL, Never> { get }
 
   /// Emits when the thanks screen should be loaded.
-  var goToThanks: Signal<Project, Never> { get }
+  var goToThanks: Signal<ThanksPageData, Never> { get }
 
   /// Emits when the web modal should be loaded.
   var goToWebModal: Signal<URLRequest, Never> { get }
 
   /// Emits when the login tout should be opened.
-  var openLoginTout: Signal<Void, Never> { get }
+  var goToLoginSignup: Signal<(LoginIntent, Project, Reward), Never> { get }
 
   /// Emits when the view controller should be popped.
   var popViewController: Signal<Void, Never> { get }
@@ -102,6 +102,7 @@ public final class DeprecatedCheckoutViewModel: DeprecatedCheckoutViewModelType 
     let applePayCapable = configData.map { $0.applePayCapable }
     let initialRequest = configData.map { $0.initialRequest }
     let project = configData.map { $0.project }
+    let reward = configData.map { $0.reward }
 
     let requestData = self.shouldStartLoadProperty.signal.skipNil()
       .map { request, navigationType -> RequestData in
@@ -187,16 +188,17 @@ public final class DeprecatedCheckoutViewModel: DeprecatedCheckoutViewModelType 
       self.checkoutRacingViewModel.outputs.goToThanks
     )
 
-    self.goToThanks = project
+    self.goToThanks = Signal.combineLatest(project, reward)
+      .map { ($0.0, $0.1, nil) }
       .takeWhen(thanksRequestOrRacingSuccessful)
 
     self.goToWebModal = modalRequestOrSafariRequest
       .map { $0.left }
       .skipNil()
 
-    self.openLoginTout = requestData
-      .filter { $0.navigation == .signup }
-      .ignoreValues()
+    self.goToLoginSignup = configData
+      .takeWhen(requestData.filter { $0.navigation == .signup }.ignoreValues())
+      .map { (LoginIntent.backProject, $0.project, $0.reward) }
 
     let checkoutCancelled = Signal.merge(
       projectRequest,
@@ -240,7 +242,7 @@ public final class DeprecatedCheckoutViewModel: DeprecatedCheckoutViewModelType 
 
     self.setStripeAppleMerchantIdentifier = applePayCapable
       .filter(isTrue)
-      .mapConst(PKPaymentAuthorizationViewController.merchantIdentifier)
+      .mapConst(Secrets.ApplePay.merchantIdentifier)
 
     self.setStripePublishableKey = applePayCapable
       .filter(isTrue)
@@ -395,9 +397,9 @@ public final class DeprecatedCheckoutViewModel: DeprecatedCheckoutViewModelType 
   public let evaluateJavascript: Signal<String, Never>
   public let goToPaymentAuthorization: Signal<PKPaymentRequest, Never>
   public let goToSafariBrowser: Signal<URL, Never>
-  public let goToThanks: Signal<Project, Never>
+  public let goToThanks: Signal<ThanksPageData, Never>
   public let goToWebModal: Signal<URLRequest, Never>
-  public let openLoginTout: Signal<Void, Never>
+  public let goToLoginSignup: Signal<(LoginIntent, Project, Reward), Never>
   public let popViewController: Signal<Void, Never>
   public let setStripeAppleMerchantIdentifier: Signal<String, Never>
   public let setStripePublishableKey: Signal<String, Never>

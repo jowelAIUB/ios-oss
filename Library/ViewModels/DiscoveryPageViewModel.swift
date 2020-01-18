@@ -25,6 +25,9 @@ public protocol DiscoveryPageViewModelInputs {
   /// Call when the filter is changed.
   func selectedFilter(_ params: DiscoveryParams)
 
+  /// Call when the onboarding login/signup button is tapped
+  func signupLoginButtonTapped()
+
   /// Call when the user taps on the activity sample.
   func tapped(activity: Activity)
 
@@ -73,6 +76,9 @@ public protocol DiscoveryPageViewModelOutputs {
 
   /// Emits a refTag for the editorial project list
   var goToEditorialProjectList: Signal<DiscoveryParams.TagID, Never> { get }
+
+  /// Emits a LoginIntent for the LoginToutViewController ot be configured with
+  var goToLoginSignup: Signal<LoginIntent, Never> { get }
 
   /// Emits a project, playlist, ref tag that we should go to from discovery.
   var goToProjectPlaylist: Signal<(Project, [Project], RefTag), Never> { get }
@@ -249,7 +255,7 @@ public final class DiscoveryPageViewModel: DiscoveryPageViewModelType, Discovery
 
     let projectCardTapped = paramsChanged
       .takePairWhen(self.tappedProject.signal.skipNil())
-      .map { params, project in (project, refTag(fromParams: params, project: project)) }
+      .map { params, project in (project, RefTag.fromParams(params)) }
 
     self.goToActivityProject = activitySampleTapped
 
@@ -299,21 +305,10 @@ public final class DiscoveryPageViewModel: DiscoveryPageViewModelType, Discovery
 
     self.scrollToProjectRow = self.transitionedToProjectRowAndTotalProperty.signal.skipNil().map(first)
 
-    requestFirstPageWith
-      .takePairWhen(pageCount)
-      .observeValues { params, page in
-        AppEnvironment.current.koala.trackDiscovery(params: params, page: page)
-      }
-
     self.setScrollsToTop = Signal.merge(
       self.viewDidAppearProperty.signal.mapConst(true),
       self.viewDidDisappearProperty.signal.mapConst(false)
     )
-
-    self.pulledToRefreshProperty.signal
-      .observeValues {
-        AppEnvironment.current.koala.trackDiscoveryPullToRefresh()
-      }
 
     self.configureEditorialTableViewHeader = paramsChanged
       .filter { $0.tagId == .goRewardless }
@@ -360,18 +355,31 @@ public final class DiscoveryPageViewModel: DiscoveryPageViewModelType, Discovery
     self.goToEditorialProjectList = self.discoveryEditorialCellTappedWithValueProperty.signal
       .skipNil()
 
-    self.discoveryEditorialCellTappedWithValueProperty.signal
-      .skipNil()
-      .observeValues { tagId in
-        AppEnvironment.current.koala.trackEditorialHeaderTapped(refTag: RefTag.projectCollection(tagId))
-      }
-
     self.notifyDelegateContentOffsetChanged = Signal.combineLatest(
       self.scrollViewDidScrollToContentOffsetProperty.signal.skipNil(),
       self.projectsAreLoadingAnimated.map(first)
     )
     .filter(second >>> isFalse)
     .map(first)
+
+    self.goToLoginSignup = self.signupLoginButtonTappedProperty.signal
+      .mapConst(LoginIntent.discoveryOnboarding)
+
+    // MARK: - Tracking
+
+    requestFirstPageWith
+      .observeValues { params in
+        AppEnvironment.current.koala.trackDiscovery(params: params)
+      }
+
+    self.discoveryEditorialCellTappedWithValueProperty.signal
+      .skipNil()
+      .observeValues { tagId in
+        AppEnvironment.current.koala.trackEditorialHeaderTapped(refTag: RefTag.projectCollection(tagId))
+      }
+
+    self.goToLoginSignup
+      .observeValues { AppEnvironment.current.koala.trackLoginOrSignupButtonClicked(intent: $0) }
   }
 
   fileprivate let configUpdatedProperty = MutableProperty<Config?>(nil)
@@ -408,6 +416,11 @@ public final class DiscoveryPageViewModel: DiscoveryPageViewModelType, Discovery
   fileprivate let selectedFilterProperty = MutableProperty<DiscoveryParams?>(nil)
   public func selectedFilter(_ params: DiscoveryParams) {
     self.selectedFilterProperty.value = params
+  }
+
+  fileprivate let signupLoginButtonTappedProperty = MutableProperty(())
+  public func signupLoginButtonTapped() {
+    self.signupLoginButtonTappedProperty.value = ()
   }
 
   fileprivate let tappedActivity = MutableProperty<Activity?>(nil)
@@ -460,6 +473,7 @@ public final class DiscoveryPageViewModel: DiscoveryPageViewModelType, Discovery
   public let configureEditorialTableViewHeader: Signal<String, Never>
   public let goToActivityProject: Signal<(Project, RefTag), Never>
   public let goToEditorialProjectList: Signal<DiscoveryParams.TagID, Never>
+  public let goToLoginSignup: Signal<LoginIntent, Never>
   public let goToProjectPlaylist: Signal<(Project, [Project], RefTag), Never>
   public let goToProjectUpdate: Signal<(Project, Update), Never>
   public let hideEmptyState: Signal<Void, Never>
@@ -484,25 +498,6 @@ private func saveSeen(activities: [Activity]) {
   activities.forEach { activity in
     AppEnvironment.current.userDefaults.lastSeenActivitySampleId = activity.id
   }
-}
-
-private func refTag(fromParams params: DiscoveryParams, project _: Project) -> RefTag {
-  if let tagId = params.tagId {
-    return .projectCollection(tagId)
-  }
-
-  if params.category != nil {
-    return .categoryWithSort(params.sort ?? .magic)
-  } else if params.recommended == .some(true) {
-    return .recsWithSort(params.sort ?? .magic)
-  } else if params.staffPicks == .some(true) {
-    return .recommendedWithSort(params.sort ?? .magic)
-  } else if params.social == .some(true) {
-    return .socialWithSort(params.sort ?? .magic)
-  } else if params.starred == .some(true) {
-    return .starredWithSort(params.sort ?? .magic)
-  }
-  return RefTag.discoveryWithSort(params.sort ?? .magic)
 }
 
 private func emptyState(forParams params: DiscoveryParams) -> EmptyState? {

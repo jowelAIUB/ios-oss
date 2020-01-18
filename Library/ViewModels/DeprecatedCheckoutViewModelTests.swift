@@ -15,9 +15,13 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
   fileprivate let evaluateJavascript = TestObserver<String, Never>()
   fileprivate let goToPaymentAuthorization = TestObserver<NSDictionary, Never>()
   fileprivate let goToSafariBrowser = TestObserver<URL, Never>()
-  fileprivate let goToThanks = TestObserver<Project, Never>()
+  fileprivate let goToThanksCheckoutData = TestObserver<Koala.CheckoutPropertiesData?, Never>()
+  fileprivate let goToThanksProject = TestObserver<Project, Never>()
+  fileprivate let goToThanksReward = TestObserver<Reward, Never>()
   fileprivate let goToWebModal = TestObserver<URLRequest, Never>()
-  fileprivate let openLoginTout = TestObserver<(), Never>()
+  fileprivate let goToLoginSignupIntent = TestObserver<LoginIntent, Never>()
+  fileprivate let goToLoginSignupProject = TestObserver<Project, Never>()
+  fileprivate let goToLoginSignupReward = TestObserver<Reward, Never>()
   fileprivate let popViewController = TestObserver<(), Never>()
   fileprivate let setStripeAppleMerchantIdentifier = TestObserver<String, Never>()
   fileprivate let setStripePublishableKey = TestObserver<String, Never>()
@@ -34,9 +38,13 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
     self.vm.outputs.goToPaymentAuthorization.map { $0.encode() as NSDictionary }
       .observe(self.goToPaymentAuthorization.observer)
     self.vm.outputs.goToSafariBrowser.observe(self.goToSafariBrowser.observer)
-    self.vm.outputs.goToThanks.observe(self.goToThanks.observer)
+    self.vm.outputs.goToThanks.map(first).observe(self.goToThanksProject.observer)
+    self.vm.outputs.goToThanks.map(second).observe(self.goToThanksReward.observer)
+    self.vm.outputs.goToThanks.map(third).observe(self.goToThanksCheckoutData.observer)
     self.vm.outputs.goToWebModal.observe(self.goToWebModal.observer)
-    self.vm.outputs.openLoginTout.observe(self.openLoginTout.observer)
+    self.vm.outputs.goToLoginSignup.map(first).observe(self.goToLoginSignupIntent.observer)
+    self.vm.outputs.goToLoginSignup.map(second).observe(self.goToLoginSignupProject.observer)
+    self.vm.outputs.goToLoginSignup.map(third).observe(self.goToLoginSignupReward.observer)
     self.vm.outputs.popViewController.observe(self.popViewController.observer)
     self.vm.outputs.setStripeAppleMerchantIdentifier.observe(self.setStripeAppleMerchantIdentifier.observer)
     self.vm.outputs.setStripePublishableKey.observe(self.setStripePublishableKey.observer)
@@ -300,7 +308,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
       )
 
       // 5: Redirect to thanks
-      self.goToThanks.assertDidNotEmitValue()
+      self.goToThanksProject.assertDidNotEmitValue()
+      self.goToThanksReward.assertDidNotEmitValue()
+      self.goToThanksCheckoutData.assertDidNotEmitValue()
       self.webViewLoadRequestURL.assertValueCount(4)
 
       XCTAssertFalse(
@@ -312,7 +322,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
         ),
         "Not prepared"
       )
-      self.goToThanks.assertValueCount(1)
+      self.goToThanksProject.assertValues([project])
+      self.goToThanksReward.assertValues([Reward.template])
+      self.goToThanksCheckoutData.assertValues([nil])
     }
 
     self.evaluateJavascript.assertValueCount(0, "No javascript was evaluated.")
@@ -375,7 +387,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
       )
 
       // 3: Redirect to thanks
-      self.goToThanks.assertDidNotEmitValue()
+      self.goToThanksProject.assertDidNotEmitValue()
+      self.goToThanksReward.assertDidNotEmitValue()
+      self.goToThanksCheckoutData.assertDidNotEmitValue()
       self.webViewLoadRequestURL.assertValueCount(3)
 
       XCTAssertFalse(
@@ -385,7 +399,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
         ),
         "Don't go to the URL since we handle it with a native thanks screen."
       )
-      self.goToThanks.assertValueCount(1)
+      self.goToThanksProject.assertValues([project])
+      self.goToThanksReward.assertValues([Reward.template])
+      self.goToThanksCheckoutData.assertValues([nil])
     }
 
     self.evaluateJavascript.assertValueCount(0, "No javascript was evaluated.")
@@ -448,7 +464,10 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
       )
 
       // 3: Redirect to thanks
-      self.goToThanks.assertDidNotEmitValue()
+      self.goToThanksProject.assertDidNotEmitValue()
+      self.goToThanksReward.assertDidNotEmitValue()
+      self.goToThanksCheckoutData.assertDidNotEmitValue()
+
       self.webViewLoadRequestURL.assertValueCount(3)
 
       XCTAssertFalse(
@@ -458,7 +477,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
         ),
         "Don't go to the URL since we handle it with a native thanks screen."
       )
-      self.goToThanks.assertValueCount(1)
+      self.goToThanksProject.assertValues([project])
+      self.goToThanksReward.assertValues([Reward.template])
+      self.goToThanksCheckoutData.assertValues([nil])
     }
 
     self.evaluateJavascript.assertValueCount(0, "No javascript was evaluated.")
@@ -511,10 +532,14 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
     )
 
     // 3: Interrupt checkout for login/signup
-    self.openLoginTout.assertDidNotEmitValue()
+    self.goToLoginSignupIntent.assertDidNotEmitValue()
+    self.goToLoginSignupProject.assertDidNotEmitValue()
+    self.goToLoginSignupReward.assertDidNotEmitValue()
 
     XCTAssertFalse(self.vm.inputs.shouldStartLoad(withRequest: signupRequest(), navigationType: .other))
-    self.openLoginTout.assertValueCount(1)
+    self.goToLoginSignupIntent.assertValues([.backProject])
+    self.goToLoginSignupProject.assertValues([project])
+    self.goToLoginSignupReward.assertValues([.template])
 
     // 4: Login
     AppEnvironment.login(.init(accessToken: "deadbeef", user: User.template))
@@ -608,7 +633,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
       )
 
       // 3: Redirect to thanks
-      self.goToThanks.assertDidNotEmitValue()
+      self.goToThanksProject.assertDidNotEmitValue()
+      self.goToThanksReward.assertDidNotEmitValue()
+      self.goToThanksCheckoutData.assertDidNotEmitValue()
 
       XCTAssertFalse(
         self.vm.inputs.shouldStartLoad(
@@ -617,7 +644,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
         ),
         "Don't go to the URL since we handle it with a native thanks screen."
       )
-      self.goToThanks.assertValueCount(1)
+      self.goToThanksProject.assertValues([project])
+      self.goToThanksReward.assertValues([Reward.template])
+      self.goToThanksCheckoutData.assertValues([nil])
     }
 
     self.evaluateJavascript.assertValueCount(0, "No javascript was evaluated.")
@@ -718,7 +747,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
       )
 
       // 3: Checkout is racing, delay a second to check status (failed!), then display failure alert.
-      self.goToThanks.assertDidNotEmitValue()
+      self.goToThanksProject.assertDidNotEmitValue()
+      self.goToThanksReward.assertDidNotEmitValue()
+      self.goToThanksCheckoutData.assertDidNotEmitValue()
       self.webViewLoadRequestURL.assertValueCount(3)
 
       XCTAssertFalse(
@@ -730,7 +761,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
       self.showAlert.assertValueCount(0)
 
       self.scheduler.advance(by: .seconds(1))
-      self.goToThanks.assertValueCount(0)
+      self.goToThanksProject.assertDidNotEmitValue()
+      self.goToThanksReward.assertDidNotEmitValue()
+      self.goToThanksCheckoutData.assertDidNotEmitValue()
       self.showAlert.assertValues([failedEnvelope.stateReason])
 
       // 4: Alert dismissed, pop view controller
@@ -801,7 +834,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
       )
 
       // 3: Checkout is racing, delay a second to check status (successful!), then go to thanks.
-      self.goToThanks.assertDidNotEmitValue()
+      self.goToThanksProject.assertDidNotEmitValue()
+      self.goToThanksReward.assertDidNotEmitValue()
+      self.goToThanksCheckoutData.assertDidNotEmitValue()
       self.webViewLoadRequestURL.assertValueCount(3)
 
       XCTAssertFalse(
@@ -813,7 +848,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
 
       self.scheduler.advance(by: .seconds(1))
       self.showAlert.assertValueCount(0)
-      self.goToThanks.assertValueCount(1)
+      self.goToThanksProject.assertValues([project])
+      self.goToThanksReward.assertValues([Reward.template])
+      self.goToThanksCheckoutData.assertValues([nil])
     }
 
     self.evaluateJavascript.assertValueCount(0, "No javascript was evaluated.")
@@ -1025,7 +1062,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
       )
 
       // 5: Redirect to thanks
-      self.goToThanks.assertDidNotEmitValue()
+      self.goToThanksProject.assertDidNotEmitValue()
+      self.goToThanksReward.assertDidNotEmitValue()
+      self.goToThanksCheckoutData.assertDidNotEmitValue()
       self.webViewLoadRequestURL.assertValueCount(3)
 
       XCTAssertFalse(
@@ -1035,7 +1074,9 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
         ),
         "Don't go to the URL since we handle it with a native thanks screen."
       )
-      self.goToThanks.assertValueCount(1)
+      self.goToThanksProject.assertValues([project])
+      self.goToThanksReward.assertValues([Reward.template])
+      self.goToThanksCheckoutData.assertValues([nil])
     }
   }
 
@@ -1061,7 +1102,7 @@ final class DeprecatedCheckoutViewModelTests: TestCase {
     self.vm.inputs.viewDidLoad()
 
     self.setStripeAppleMerchantIdentifier.assertValues(
-      [PKPaymentAuthorizationViewController.merchantIdentifier]
+      [Secrets.ApplePay.merchantIdentifier]
     )
   }
 
@@ -1124,7 +1165,7 @@ private func applePayUrlRequest(
   let payload: [String: Any] = [
     "country_code": project.country.countryCode,
     "currency_code": project.country.currencyCode,
-    "merchant_identifier": PKPaymentAuthorizationViewController.merchantIdentifier,
+    "merchant_identifier": Secrets.ApplePay.merchantIdentifier,
     "supported_networks": ["AmEx", "Visa", "MasterCard", "Discover"],
     "payment_summary_items": [
       [

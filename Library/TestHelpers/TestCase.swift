@@ -16,6 +16,7 @@ internal class TestCase: FBSnapshotTestCase {
   internal let dataLakeTrackingClient = MockTrackingClient()
   internal let dateType = MockDate.self
   internal let mainBundle = MockBundle()
+  internal let optimizelyClient = MockOptimizelyClient()
   internal let reachability = MutableProperty(Reachability.wifi)
   internal let scheduler = TestScheduler(startDate: MockDate().date)
   internal let trackingClient = MockTrackingClient()
@@ -43,6 +44,7 @@ internal class TestCase: FBSnapshotTestCase {
     AppEnvironment.pushEnvironment(
       apiService: self.apiService,
       apiDelayInterval: .seconds(0),
+      applePayCapable: MockApplePayCapable(),
       application: UIApplication.shared,
       assetImageGeneratorType: AVAssetImageGenerator.self,
       cache: self.cache,
@@ -64,6 +66,7 @@ internal class TestCase: FBSnapshotTestCase {
       launchedCountries: .init(),
       locale: .init(identifier: "en_US"),
       mainBundle: self.mainBundle,
+      optimizelyClient: self.optimizelyClient,
       pushRegistrationType: MockPushRegistration.self,
       reachability: self.reachability.producer,
       scheduler: self.scheduler,

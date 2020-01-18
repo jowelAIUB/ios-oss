@@ -51,6 +51,12 @@ public struct AppEnvironment: AppEnvironmentType {
     )
   }
 
+  public static func updateOptimizelyClient(_ optimizelyClient: OptimizelyClientType?) {
+    self.replaceCurrentEnvironment(
+      optimizelyClient: optimizelyClient
+    )
+  }
+
   public static func updateServerConfig(_ config: ServerConfigType) {
     let service = Service(serverConfig: config)
 
@@ -122,6 +128,7 @@ public struct AppEnvironment: AppEnvironmentType {
   public static func pushEnvironment(
     apiService: ServiceType = AppEnvironment.current.apiService,
     apiDelayInterval: DispatchTimeInterval = AppEnvironment.current.apiDelayInterval,
+    applePayCapable: ApplePayCapabilitiesType = AppEnvironment.current.applePayCapabilities,
     application: UIApplicationType = UIApplication.shared,
     assetImageGeneratorType: AssetImageGeneratorType.Type = AppEnvironment.current.assetImageGeneratorType,
     cache: KSCache = AppEnvironment.current.cache,
@@ -140,6 +147,7 @@ public struct AppEnvironment: AppEnvironmentType {
     launchedCountries: LaunchedCountries = AppEnvironment.current.launchedCountries,
     locale: Locale = AppEnvironment.current.locale,
     mainBundle: NSBundleType = AppEnvironment.current.mainBundle,
+    optimizelyClient: OptimizelyClientType? = AppEnvironment.current.optimizelyClient,
     pushRegistrationType: PushRegistrationType.Type = AppEnvironment.current.pushRegistrationType,
     reachability: SignalProducer<Reachability, Never> = AppEnvironment.current.reachability,
     scheduler: DateScheduler = AppEnvironment.current.scheduler,
@@ -150,6 +158,7 @@ public struct AppEnvironment: AppEnvironmentType {
       Environment(
         apiService: apiService,
         apiDelayInterval: apiDelayInterval,
+        applePayCapable: applePayCapable,
         application: application,
         assetImageGeneratorType: assetImageGeneratorType,
         cache: cache,
@@ -168,6 +177,7 @@ public struct AppEnvironment: AppEnvironmentType {
         launchedCountries: launchedCountries,
         locale: locale,
         mainBundle: mainBundle,
+        optimizelyClient: optimizelyClient,
         pushRegistrationType: pushRegistrationType,
         reachability: reachability,
         scheduler: scheduler,
@@ -182,6 +192,7 @@ public struct AppEnvironment: AppEnvironmentType {
   public static func replaceCurrentEnvironment(
     apiService: ServiceType = AppEnvironment.current.apiService,
     apiDelayInterval: DispatchTimeInterval = AppEnvironment.current.apiDelayInterval,
+    applePayCapable: ApplePayCapabilitiesType = AppEnvironment.current.applePayCapabilities,
     application: UIApplicationType = UIApplication.shared,
     assetImageGeneratorType: AssetImageGeneratorType.Type = AppEnvironment.current.assetImageGeneratorType,
     cache: KSCache = AppEnvironment.current.cache,
@@ -200,6 +211,7 @@ public struct AppEnvironment: AppEnvironmentType {
     launchedCountries: LaunchedCountries = AppEnvironment.current.launchedCountries,
     locale: Locale = AppEnvironment.current.locale,
     mainBundle: NSBundleType = AppEnvironment.current.mainBundle,
+    optimizelyClient: OptimizelyClientType? = AppEnvironment.current.optimizelyClient,
     pushRegistrationType: PushRegistrationType.Type = AppEnvironment.current.pushRegistrationType,
     reachability: SignalProducer<Reachability, Never> = AppEnvironment.current.reachability,
     scheduler: DateScheduler = AppEnvironment.current.scheduler,
@@ -210,6 +222,7 @@ public struct AppEnvironment: AppEnvironmentType {
       Environment(
         apiService: apiService,
         apiDelayInterval: apiDelayInterval,
+        applePayCapable: applePayCapable,
         application: application,
         assetImageGeneratorType: assetImageGeneratorType,
         cache: cache,
@@ -228,6 +241,7 @@ public struct AppEnvironment: AppEnvironmentType {
         launchedCountries: launchedCountries,
         locale: locale,
         mainBundle: mainBundle,
+        optimizelyClient: optimizelyClient,
         pushRegistrationType: pushRegistrationType,
         reachability: reachability,
         scheduler: scheduler,

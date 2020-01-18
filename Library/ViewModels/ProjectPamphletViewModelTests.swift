@@ -67,7 +67,6 @@ final class ProjectPamphletViewModelTests: TestCase {
     let refTag = RefTag.category
     self.vm.inputs.configureWith(projectOrParam: .left(project), refTag: refTag)
     self.vm.inputs.viewDidLoad()
-    self.vm.inputs.viewWillAppear(animated: false)
     self.vm.inputs.viewDidAppear(animated: false)
 
     self.configureChildViewControllersWithProject.assertValues([project])
@@ -78,13 +77,19 @@ final class ProjectPamphletViewModelTests: TestCase {
     self.configureChildViewControllersWithProject.assertValues([project, project])
     self.configureChildViewControllersWithRefTag.assertValues([refTag, refTag])
 
-    self.vm.inputs.viewWillAppear(animated: true)
-    self.vm.inputs.viewDidAppear(animated: true)
+    self.vm.inputs.didBackProject()
 
     self.scheduler.advance()
 
     self.configureChildViewControllersWithProject.assertValues([project, project, project])
     self.configureChildViewControllersWithRefTag.assertValues([refTag, refTag, refTag])
+
+    self.vm.inputs.managePledgeViewControllerFinished(with: nil)
+
+    self.scheduler.advance()
+
+    self.configureChildViewControllersWithProject.assertValues([project, project, project, project])
+    self.configureChildViewControllersWithRefTag.assertValues([refTag, refTag, refTag, refTag])
   }
 
   func testConfigureChildViewControllersWithProject_ConfiguredWithParam() {
@@ -103,13 +108,19 @@ final class ProjectPamphletViewModelTests: TestCase {
     self.configureChildViewControllersWithProject.assertValues([project])
     self.configureChildViewControllersWithRefTag.assertValues([nil])
 
-    self.vm.inputs.viewWillAppear(animated: true)
-    self.vm.inputs.viewDidAppear(animated: true)
+    self.vm.inputs.didBackProject()
 
     self.scheduler.advance()
 
     self.configureChildViewControllersWithProject.assertValues([project, project])
     self.configureChildViewControllersWithRefTag.assertValues([nil, nil])
+
+    self.vm.inputs.managePledgeViewControllerFinished(with: nil)
+
+    self.scheduler.advance()
+
+    self.configureChildViewControllersWithProject.assertValues([project, project, project])
+    self.configureChildViewControllersWithRefTag.assertValues([nil, nil, nil])
   }
 
   func testNavigationBar() {
@@ -150,17 +161,17 @@ final class ProjectPamphletViewModelTests: TestCase {
     self.scheduler.advance()
 
     XCTAssertEqual(
-      ["Project Page Viewed", "Viewed Project Page", "Project Page"],
-      self.trackingClient.events, "A project page koala event is tracked."
+      ["Project Page Viewed"],
+      self.trackingClient.events, "A project page event is tracked."
     )
     XCTAssertEqual(
-      [RefTag.category.stringTag, RefTag.category.stringTag, RefTag.category.stringTag],
-      self.trackingClient.properties.compactMap { $0["ref_tag"] as? String },
+      [RefTag.category.stringTag],
+      self.trackingClient.properties.compactMap { $0["session_ref_tag"] as? String },
       "The ref tag is tracked in the koala event."
     )
     XCTAssertEqual(
-      [RefTag.category.stringTag, RefTag.category.stringTag, RefTag.category.stringTag],
-      self.trackingClient.properties.compactMap { $0["referrer_credit"] as? String },
+      [RefTag.category.stringTag],
+      self.trackingClient.properties.compactMap { $0["session_referrer_credit"] as? String },
       "The referral credit is tracked in the koala event."
     )
     XCTAssertEqual(
@@ -188,31 +199,56 @@ final class ProjectPamphletViewModelTests: TestCase {
 
     XCTAssertEqual(
       [
-        "Project Page Viewed", "Viewed Project Page", "Project Page", "Project Page Viewed",
-        "Viewed Project Page", "Project Page"
+        "Project Page Viewed", "Project Page Viewed"
       ],
       self.trackingClient.events, "A project page koala event is tracked."
     )
     XCTAssertEqual(
       [
-        RefTag.category.stringTag, RefTag.category.stringTag, RefTag.category.stringTag,
-        RefTag.recommended.stringTag, RefTag.recommended.stringTag, RefTag.recommended.stringTag
+        RefTag.category.stringTag,
+        RefTag.recommended.stringTag
       ],
-      self.trackingClient.properties.compactMap { $0["ref_tag"] as? String },
+      self.trackingClient.properties.compactMap { $0["session_ref_tag"] as? String },
       "The new ref tag is tracked in koala event."
     )
     XCTAssertEqual(
       [
-        RefTag.category.stringTag, RefTag.category.stringTag, RefTag.category.stringTag,
-        RefTag.category.stringTag, RefTag.category.stringTag, RefTag.category.stringTag
+        RefTag.category.stringTag,
+        RefTag.category.stringTag
       ],
-      self.trackingClient.properties.compactMap { $0["referrer_credit"] as? String },
+      self.trackingClient.properties.compactMap { $0["session_referrer_credit"] as? String },
       "The referrer credit did not change, and is still category."
     )
     XCTAssertEqual(
       1, self.cookieStorage.cookies?.count,
       "A single cookie has been set."
     )
+  }
+
+  func testProjectPageViewed_Tracking_OnError() {
+    let service = MockService(fetchProjectError: .couldNotParseJSON)
+
+    withEnvironment(apiService: service) {
+      self.configureInitialState(.init(left: .template))
+
+      self.scheduler.advance()
+
+      XCTAssertEqual(
+        [],
+        self.trackingClient.events,
+        "Project Page Viewed doesnt track if the request fails"
+      )
+    }
+  }
+
+  func testProjectPaveViewed_OnViewDidAppear() {
+    XCTAssertEqual([], self.trackingClient.events)
+
+    self.configureInitialState(.init(left: .template))
+
+    self.scheduler.advance()
+
+    XCTAssertEqual(["Project Page Viewed"], self.trackingClient.events)
   }
 
   func testMockCookieStorageSet_SeparateSchedulers() {
@@ -298,17 +334,17 @@ final class ProjectPamphletViewModelTests: TestCase {
     self.scheduler.advance()
 
     XCTAssertEqual(
-      ["Project Page Viewed", "Viewed Project Page", "Project Page"],
+      ["Project Page Viewed"],
       self.trackingClient.events, "A project page koala event is tracked."
     )
     XCTAssertEqual(
-      [RefTag.category.stringTag, RefTag.category.stringTag, RefTag.category.stringTag],
-      self.trackingClient.properties.compactMap { $0["ref_tag"] as? String },
+      [RefTag.category.stringTag],
+      self.trackingClient.properties.compactMap { $0["session_ref_tag"] as? String },
       "The ref tag is tracked in the koala event."
     )
     XCTAssertEqual(
-      [RefTag.category.stringTag, RefTag.category.stringTag, RefTag.category.stringTag],
-      self.trackingClient.properties.compactMap { $0["referrer_credit"] as? String },
+      [RefTag.category.stringTag],
+      self.trackingClient.properties.compactMap { $0["session_referrer_credit"] as? String },
       "The referral credit is tracked in the koala event."
     )
     XCTAssertEqual(
@@ -336,25 +372,23 @@ final class ProjectPamphletViewModelTests: TestCase {
 
     XCTAssertEqual(
       [
-        "Project Page Viewed", "Viewed Project Page", "Project Page", "Project Page Viewed",
-        "Viewed Project Page", "Project Page"
+        "Project Page Viewed", "Project Page Viewed"
       ],
       self.trackingClient.events, "A project page koala event is tracked."
     )
     XCTAssertEqual(
       [
-        RefTag.category.stringTag, RefTag.category.stringTag, RefTag.category.stringTag,
-        RefTag.recommended.stringTag, RefTag.recommended.stringTag, RefTag.recommended.stringTag
+        RefTag.category.stringTag,
+        RefTag.recommended.stringTag
       ],
-      self.trackingClient.properties.compactMap { $0["ref_tag"] as? String },
+      self.trackingClient.properties.compactMap { $0["session_ref_tag"] as? String },
       "The new ref tag is tracked in koala event."
     )
     XCTAssertEqual(
       [
-        RefTag.category.stringTag, RefTag.category.stringTag, RefTag.category.stringTag,
-        RefTag.category.stringTag, RefTag.category.stringTag, RefTag.category.stringTag
+        RefTag.category.stringTag, RefTag.category.stringTag
       ],
-      self.trackingClient.properties.compactMap { $0["referrer_credit"] as? String },
+      self.trackingClient.properties.compactMap { $0["session_referrer_credit"] as? String },
       "The referrer credit did not change, and is still category."
     )
     XCTAssertEqual(
@@ -676,7 +710,7 @@ final class ProjectPamphletViewModelTests: TestCase {
     }
   }
 
-  func testConfigurePledgeCTAView_reloadsUponReturnToView_featureEnabled_experimentEnabled() {
+  func testConfigurePledgeCTAView_reloadsUponBackProject_featureEnabled_experimentEnabled() {
     let config = Config.template
       |> \.features .~ [Feature.nativeCheckout.rawValue: true]
       |> \.abExperiments .~ [Experiment.Name.nativeCheckoutV1.rawValue: "experimental"]
@@ -710,8 +744,53 @@ final class ProjectPamphletViewModelTests: TestCase {
       config: config,
       mainBundle: releaseBundle
     ) {
-      self.vm.inputs.viewWillAppear(animated: true)
-      self.vm.inputs.viewDidAppear(animated: true)
+      self.vm.inputs.didBackProject()
+
+      XCTAssertTrue(self.configurePledgeCTAViewProject.lastValue?.left == projectFull)
+      self.configurePledgeCTAViewIsLoading.assertValues([true, true, false, true])
+
+      self.scheduler.advance()
+
+      XCTAssertTrue(self.configurePledgeCTAViewProject.lastValue?.left == projectFull2)
+      self.configurePledgeCTAViewIsLoading.assertValues([true, true, false, true, true, false])
+    }
+  }
+
+  func testConfigurePledgeCTAView_reloadsUponUpdatePledge_featureEnabled_experimentEnabled() {
+    let config = Config.template
+      |> \.features .~ [Feature.nativeCheckout.rawValue: true]
+      |> \.abExperiments .~ [Experiment.Name.nativeCheckoutV1.rawValue: "experimental"]
+    let project = Project.template
+    let projectFull = Project.template
+      |> \.id .~ 2
+      |> Project.lens.personalization.isBacking .~ true
+    let projectFull2 = Project.template
+      |> \.id .~ 3
+
+    let mockService = MockService(fetchProjectResponse: projectFull)
+
+    withEnvironment(apiService: mockService, config: config, mainBundle: releaseBundle) {
+      self.configurePledgeCTAViewProject.assertDidNotEmitValue()
+      self.configurePledgeCTAViewIsLoading.assertDidNotEmitValue()
+
+      self.vm.inputs.configureWith(projectOrParam: .left(project), refTag: .discovery)
+      self.vm.inputs.viewDidLoad()
+
+      XCTAssertTrue(self.configurePledgeCTAViewProject.lastValue?.left == project)
+      self.configurePledgeCTAViewIsLoading.assertValues([true])
+
+      self.scheduler.advance()
+
+      XCTAssertTrue(self.configurePledgeCTAViewProject.lastValue?.left == projectFull)
+      self.configurePledgeCTAViewIsLoading.assertValues([true, true, false])
+    }
+
+    withEnvironment(
+      apiService: MockService(fetchProjectResponse: projectFull2),
+      config: config,
+      mainBundle: releaseBundle
+    ) {
+      self.vm.inputs.managePledgeViewControllerFinished(with: nil)
 
       XCTAssertTrue(self.configurePledgeCTAViewProject.lastValue?.left == projectFull)
       self.configurePledgeCTAViewIsLoading.assertValues([true, true, false, true])
@@ -840,31 +919,6 @@ final class ProjectPamphletViewModelTests: TestCase {
 
       XCTAssertTrue(self.configurePledgeCTAViewProject.lastValue?.left == projectFull2)
       self.configurePledgeCTAViewIsLoading.assertValues([true, true, false, true, true, false])
-    }
-  }
-
-  func testbackThisButton_eventTracking() {
-    let config = Config.template |> \.features .~ [Feature.nativeCheckout.rawValue: true]
-    let client = MockTrackingClient()
-    let project = Project.template
-
-    withEnvironment(
-      apiService: MockService(),
-      config: config,
-      koala: Koala(client: client)
-    ) {
-      XCTAssertEqual([], client.events)
-
-      self.configureInitialState(.left(project))
-
-      self.goToRewardsProject.assertDidNotEmitValue()
-      self.goToRewardsRefTag.assertDidNotEmitValue()
-
-      self.vm.inputs.pledgeCTAButtonTapped(with: .pledge)
-      XCTAssertEqual(
-        ["Project Page Viewed", "Viewed Project Page", "Project Page"],
-        client.events
-      )
     }
   }
 

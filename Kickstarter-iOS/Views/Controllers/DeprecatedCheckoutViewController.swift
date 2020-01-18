@@ -22,7 +22,7 @@ internal final class DeprecatedCheckoutViewController: DeprecatedWebViewControll
       initialRequest: initialRequest,
       project: project,
       reward: reward,
-      applePayCapable: PKPaymentAuthorizationViewController.applePayCapable(for: project)
+      applePayCapable: AppEnvironment.current.applePayCapabilities.applePayCapable(for: project)
     )
     return vc
   }
@@ -72,19 +72,21 @@ internal final class DeprecatedCheckoutViewController: DeprecatedWebViewControll
 
     self.viewModel.outputs.goToThanks
       .observeForControllerAction()
-      .observeValues { [weak self] project in
+      .observeValues { [weak self] data in
         generateNotificationSuccessFeedback()
 
-        self?.goToThanks(project: project)
+        self?.goToThanks(data: data)
       }
 
     self.viewModel.outputs.goToWebModal
       .observeForControllerAction()
       .observeValues { [weak self] request in self?.goToWebModal(request: request) }
 
-    self.viewModel.outputs.openLoginTout
+    self.viewModel.outputs.goToLoginSignup
       .observeForControllerAction()
-      .observeValues { [weak self] _ in self?.openLoginTout() }
+      .observeValues { [weak self] intent, project, reward in
+        self?.goToLoginSignup(with: intent, project: project, reward: reward)
+      }
 
     self.viewModel.outputs.popViewController
       .observeForControllerAction()
@@ -138,8 +140,8 @@ internal final class DeprecatedCheckoutViewController: DeprecatedWebViewControll
     self.present(vc, animated: true, completion: nil)
   }
 
-  fileprivate func goToThanks(project: Project) {
-    let thanksVC = ThanksViewController.configuredWith(project: project)
+  fileprivate func goToThanks(data: ThanksPageData) {
+    let thanksVC = ThanksViewController.configured(with: data)
     self.navigationController?.pushViewController(thanksVC, animated: true)
   }
 
@@ -149,8 +151,12 @@ internal final class DeprecatedCheckoutViewController: DeprecatedWebViewControll
     self.present(nav, animated: true, completion: nil)
   }
 
-  fileprivate func openLoginTout() {
-    let vc = LoginToutViewController.configuredWith(loginIntent: .backProject)
+  fileprivate func goToLoginSignup(with intent: LoginIntent, project: Project, reward: Reward) {
+    let vc = LoginToutViewController.configuredWith(
+      loginIntent: intent,
+      project: project,
+      reward: reward
+    )
     let nav = UINavigationController(rootViewController: vc)
     nav.modalPresentationStyle = .formSheet
 

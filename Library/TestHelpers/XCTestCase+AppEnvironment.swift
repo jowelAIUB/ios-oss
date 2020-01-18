@@ -17,6 +17,7 @@ extension XCTestCase {
   func withEnvironment(
     apiService: ServiceType = AppEnvironment.current.apiService,
     apiDelayInterval: DispatchTimeInterval = AppEnvironment.current.apiDelayInterval,
+    applePayCapable: ApplePayCapabilitiesType = AppEnvironment.current.applePayCapabilities,
     application: UIApplicationType = UIApplication.shared,
     assetImageGeneratorType: AssetImageGeneratorType.Type = AppEnvironment.current.assetImageGeneratorType,
     cache: KSCache = AppEnvironment.current.cache,
@@ -34,6 +35,7 @@ extension XCTestCase {
     launchedCountries: LaunchedCountries = AppEnvironment.current.launchedCountries,
     locale: Locale = AppEnvironment.current.locale,
     mainBundle: NSBundleType = AppEnvironment.current.mainBundle,
+    optimizelyClient: OptimizelyClientType? = AppEnvironment.current.optimizelyClient,
     pushRegistrationType: PushRegistrationType.Type = AppEnvironment.current.pushRegistrationType,
     scheduler: DateScheduler = AppEnvironment.current.scheduler,
     ubiquitousStore: KeyValueStoreType = AppEnvironment.current.ubiquitousStore,
@@ -44,6 +46,7 @@ extension XCTestCase {
       Environment(
         apiService: apiService,
         apiDelayInterval: apiDelayInterval,
+        applePayCapable: applePayCapable,
         application: application,
         assetImageGeneratorType: assetImageGeneratorType,
         cache: cache,
@@ -61,6 +64,7 @@ extension XCTestCase {
         launchedCountries: launchedCountries,
         locale: locale,
         mainBundle: mainBundle,
+        optimizelyClient: optimizelyClient,
         pushRegistrationType: pushRegistrationType,
         scheduler: scheduler,
         ubiquitousStore: ubiquitousStore,
